@@ -1,4 +1,7 @@
 import express, { Express, Request, Response } from 'express';
+import passport from 'passport';
+import session from 'express-session';
+import mongoose from 'mongoose';
 
 // Environment variable configuration
 if (process.env.NODE_ENV === 'production') {
@@ -11,8 +14,38 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
+// Connect to MongoDB
+mongoose.connect(process.env.MONGO_URI as string);
+const db = mongoose.connection;
+
+// MongoDB error handling
+const handleMongoError = (err: Error) => {
+  console.error('MongoDB connection error:', err);
+};
+db.on('error', handleMongoError);
+
+// Express
 const app: Express = express();
 
+// Body parser
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Express session middleware
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET as string,
+    resave: false,
+    saveUninitialized: false,
+    cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 }, // 30 days in ms
+  })
+);
+
+// Passport middleware
+app.use(passport.initialize());
+app.use(passport.session());
+
+// General routes
 app.get('/', (req: Request, res: Response) => {
   res.send('Hello world');
 });
